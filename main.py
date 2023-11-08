@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from typing import Annotated
 from datetime import timedelta
 from fastapi import Depends, FastAPI, HTTPException, status, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app import models, crud, schemas
 from app.database import Session, engine, get_db
-from app.auth import authenticate_user, create_access_token, get_current_user
+from app.auth import authenticate_user, create_access_token, get_current_user, oauth2_scheme
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -31,37 +32,33 @@ async def db_session_middleware(request: Request, call_next):
         request.state.db.close()
     return response
 
-@app.get("/")
-def hello():
-    return {"message": "Hello World"}
-
-# Dependency
-# def get_db():
-#     db = Session()
-#     try:
-#         yield db
-#     finally:
-#         db.close()
-
 @app.get("/roles/", response_model=list[schemas.Role])
-def read_roles(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_roles(token: Annotated[str, Depends(oauth2_scheme)], skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    if not get_current_user(db=db, token=token):
+        return HTTPException(status_code=401, detail="Invalid credentials")
     roles = crud.get_roles(db, skip=skip, limit=limit)
     return roles
 
 @app.post("/roles/", response_model=schemas.Role)
-def create_role(role: schemas.RoleBase, db: Session = Depends(get_db)):
+def create_role(token: Annotated[str, Depends(oauth2_scheme)], role: schemas.RoleBase, db: Session = Depends(get_db)):
+    if not get_current_user(db=db, token=token):
+        return HTTPException(status_code=401, detail="Invalid credentials")
     db_role = crud.get_role_by_role(db=db, role=role.role)
     if db_role:
         raise HTTPException(status_code=400, detail="Role name already registered")
     return crud.create_role(db=db, role=role)
 
 @app.get("/users/", response_model=list[schemas.User])
-def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_users(token: Annotated[str, Depends(oauth2_scheme)], skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    if not get_current_user(db=db, token=token):
+        return HTTPException(status_code=401, detail="Invalid credentials")
     users = crud.get_users(db, skip=skip, limit=limit)
     return users
 
 @app.post("/users/", response_model=schemas.User)
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+def create_user(token: Annotated[str, Depends(oauth2_scheme)], user: schemas.UserCreate, db: Session = Depends(get_db)):
+    if not get_current_user(db=db, token=token):
+        return HTTPException(status_code=401, detail="Invalid credentials")
     db_user = crud.get_user_by_email(db, email=user.email)
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
