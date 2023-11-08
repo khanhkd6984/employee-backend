@@ -41,7 +41,7 @@ def get_url():
     )
     db_host = config("DB_HOST", cast=str, default="localhost")
     db_port = config("DB_PORT", cast=str, default="5432")
-    db_name = config("DB_NAME", cast=str, default="test_db")
+    db_name = config("DB_NAME", cast=str, default="postgres")
     return f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 
 

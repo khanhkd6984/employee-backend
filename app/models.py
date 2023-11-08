@@ -1,8 +1,7 @@
 from __future__ import annotations
-import datetime
 import uuid
 from typing import List
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text, Date, DateTime, Table
+from sqlalchemy import Column, ForeignKey, Integer, String, Text, Date, DateTime, Table
 from sqlalchemy.orm import relationship, Mapped
 from sqlalchemy.dialects.postgresql import UUID
 from .database import Base
@@ -14,7 +13,6 @@ class Role(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     role = Column(String, unique=True)
 
-    users = relationship("User", back_populates="users")
 
 class User(Base):
     __tablename__ = "users"
@@ -25,9 +23,8 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     role_id = Column(UUID, ForeignKey("roles.id"))
 
-    role = relationship("Role", back_populates="user")
-    employee = relationship("Employee", uselist=False, back_populates="employee")
-    manager = relationship("Employee", back_populates="manager")
+    role = relationship("Role")
+    employee = relationship("Employee")
 
 
 class Employee(Base):
@@ -39,14 +36,12 @@ class Employee(Base):
     phone = Column(String)
     job_position = Column(String)
     department = Column(String)
-    manager_id = Column(UUID, ForeignKey("users.id"))
+    manager_id = Column(UUID, ForeignKey("employees.id"))
     work_location = Column(String)
     summary = Column(Text)
-    # created_date = Column(DateTime, default=datetime.datetime.utcnow)
 
-    experiences = relationship("Experience", back_populates="experiences")
-    educations = relationship("Education", back_populates="educations")
-    licenses = relationship("License", back_populates="licenses")
+    user = relationship("User", overlaps="employee")
+    manager = relationship("Employee", remote_side=[id])
 
 
 class Experience(Base):
@@ -60,7 +55,7 @@ class Experience(Base):
     end_date = Column(Date)
     description = Column(Text)
 
-    employee = relationship("Employee", back_populates="experience")
+    employee = relationship("Employee")
 
 
 project_programming_language = Table(
@@ -95,8 +90,8 @@ class ExperienceProject(Base):
     website = Column(String)
     position = Column(String)
     responsibility = Column(Text)
-    # other = Column(Text)
 
+    experience = relationship("Experience")
     programming_languages: Mapped[List[ProgrammingLanguage]] = relationship(secondary=project_programming_language, back_populates="projects")
     frameworks: Mapped[List[Framework]] = relationship(secondary=project_framework, back_populates="projects")
     servers: Mapped[List[Server]] = relationship(secondary=project_server, back_populates="projects")
@@ -139,7 +134,7 @@ class Education(Base):
     end_date = Column(Date)
     description = Column(Text)
 
-    employee = relationship("Employee", back_populates="education")
+    employee = relationship("Employee")
 
 
 class License(Base):
@@ -150,8 +145,8 @@ class License(Base):
     license_name = Column(String)
     issuing_organization = Column(String)
     credential_id = Column(String)
-    start_date = Column(Date)
-    end_date = Column(Date)
+    issue_date = Column(Date)
+    expiration_date = Column(Date)
     credential_url = Column(String)
 
-    employee = relationship("Employee", back_populates="licence")
+    employee = relationship("Employee")
