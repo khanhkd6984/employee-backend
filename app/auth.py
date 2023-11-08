@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -13,10 +13,12 @@ from . import database
 
 load_dotenv()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
 
 def get_password_hash(password):
     return pwd_context.hash(password)
+
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -30,6 +32,7 @@ def authenticate_user(db: Session, email: str, password: str):
         return False
     return user
 
+
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
     if expires_delta:
@@ -37,17 +40,24 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     else:
         expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, os.getenv('SECRET_KEY'), algorithm=os.getenv('ALGORITHM'))
+    encoded_jwt = jwt.encode(
+        to_encode, os.getenv("SECRET_KEY"), algorithm=os.getenv("ALGORITHM")
+    )
     return encoded_jwt
 
-def get_current_user(db: Session = Depends(database.get_db), token: str = Depends(oauth2_scheme)):
+
+def get_current_user(
+    db: Session = Depends(database.get_db), token: str = Depends(oauth2_scheme)
+):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid credentials",
-        headers={"WWW-Authenticate": "Bearer"}
+        headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, os.getenv('SECRET_KEY'), algorithms=[os.getenv('ALGORITHM')])
+        payload = jwt.decode(
+            token, os.getenv("SECRET_KEY"), algorithms=[os.getenv("ALGORITHM")]
+        )
         email: str = payload.get("sub")
         if email is None:
             raise credentials_exception

@@ -1,7 +1,7 @@
 from __future__ import annotations
 import uuid
 from typing import List
-from sqlalchemy import Column, ForeignKey, Integer, String, Text, Date, DateTime, Table
+from sqlalchemy import Column, ForeignKey, Integer, String, Text, Date, Table
 from sqlalchemy.orm import relationship, Mapped
 from sqlalchemy.dialects.postgresql import UUID
 from .database import Base
@@ -11,7 +11,15 @@ class Role(Base):
     __tablename__ = "roles"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    role = Column(String, unique=True)
+    role = Column(String, unique=True, nullable=False)
+
+
+employee_manager = Table(
+    "employee_manager",
+    Base.metadata,
+    Column("employee_id", ForeignKey("employees.id"), primary_key=True),
+    Column("manager_id", ForeignKey("users.id"), primary_key=True),
+)
 
 
 class User(Base):
@@ -20,28 +28,34 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, nullable=False)
+    badge_number = Column(String, unique=True, nullable=False)
     hashed_password = Column(String, nullable=False)
-    role_id = Column(UUID, ForeignKey("roles.id"))
+    role_id = Column(UUID, ForeignKey("roles.id"), nullable=False)
 
     role = relationship("Role")
     employee = relationship("Employee")
+
+    employees: Mapped[List[Employee]] = relationship(
+        secondary=employee_manager, back_populates="managers"
+    )
 
 
 class Employee(Base):
     __tablename__ = "employees"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID, ForeignKey("users.id"))
+    user_id = Column(UUID, ForeignKey("users.id"), unique=True, nullable=False)
     avatar_url = Column(String)
     phone = Column(String)
     job_position = Column(String)
     department = Column(String)
-    manager_id = Column(UUID, ForeignKey("employees.id"))
     work_location = Column(String)
     summary = Column(Text)
 
     user = relationship("User", overlaps="employee")
-    manager = relationship("Employee", remote_side=[id])
+    managers: Mapped[List[User]] = relationship(
+        secondary=employee_manager, back_populates="employees"
+    )
 
 
 class Experience(Base):
@@ -61,23 +75,34 @@ class Experience(Base):
 project_programming_language = Table(
     "project_programming_language",
     Base.metadata,
-    Column("experience_project_id", ForeignKey("experience_projects.id"), primary_key=True),
-    Column("programming_language_id", ForeignKey("programming_languages.id"), primary_key=True),
+    Column(
+        "experience_project_id", ForeignKey("experience_projects.id"), primary_key=True
+    ),
+    Column(
+        "programming_language_id",
+        ForeignKey("programming_languages.id"),
+        primary_key=True,
+    ),
 )
 
 project_framework = Table(
     "project_framework",
     Base.metadata,
-    Column("experience_project_id", ForeignKey("experience_projects.id"), primary_key=True),
+    Column(
+        "experience_project_id", ForeignKey("experience_projects.id"), primary_key=True
+    ),
     Column("framework_id", ForeignKey("frameworks.id"), primary_key=True),
 )
 
 project_server = Table(
     "project_server",
     Base.metadata,
-    Column("experience_project_id", ForeignKey("experience_projects.id"), primary_key=True),
+    Column(
+        "experience_project_id", ForeignKey("experience_projects.id"), primary_key=True
+    ),
     Column("server_id", ForeignKey("servers.id"), primary_key=True),
 )
+
 
 class ExperienceProject(Base):
     __tablename__ = "experience_projects"
@@ -92,9 +117,15 @@ class ExperienceProject(Base):
     responsibility = Column(Text)
 
     experience = relationship("Experience")
-    programming_languages: Mapped[List[ProgrammingLanguage]] = relationship(secondary=project_programming_language, back_populates="projects")
-    frameworks: Mapped[List[Framework]] = relationship(secondary=project_framework, back_populates="projects")
-    servers: Mapped[List[Server]] = relationship(secondary=project_server, back_populates="projects")
+    programming_languages: Mapped[List[ProgrammingLanguage]] = relationship(
+        secondary=project_programming_language, back_populates="projects"
+    )
+    frameworks: Mapped[List[Framework]] = relationship(
+        secondary=project_framework, back_populates="projects"
+    )
+    servers: Mapped[List[Server]] = relationship(
+        secondary=project_server, back_populates="projects"
+    )
 
 
 class ProgrammingLanguage(Base):
@@ -103,7 +134,9 @@ class ProgrammingLanguage(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     language = Column(String, nullable=False)
 
-    projects: Mapped[List[ExperienceProject]] = relationship(secondary=project_programming_language, back_populates="programming_languages")
+    projects: Mapped[List[ExperienceProject]] = relationship(
+        secondary=project_programming_language, back_populates="programming_languages"
+    )
 
 
 class Framework(Base):
@@ -112,7 +145,9 @@ class Framework(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     framework = Column(String, nullable=False)
 
-    projects: Mapped[List[ExperienceProject]] = relationship(secondary=project_framework, back_populates="frameworks")
+    projects: Mapped[List[ExperienceProject]] = relationship(
+        secondary=project_framework, back_populates="frameworks"
+    )
 
 
 class Server(Base):
@@ -121,7 +156,10 @@ class Server(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     server = Column(String, nullable=False)
 
-    projects: Mapped[List[ExperienceProject]] = relationship(secondary=project_server, back_populates="servers")
+    projects: Mapped[List[ExperienceProject]] = relationship(
+        secondary=project_server, back_populates="servers"
+    )
+
 
 class Education(Base):
     __tablename__ = "educations"
