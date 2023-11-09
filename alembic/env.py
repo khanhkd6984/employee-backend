@@ -36,12 +36,10 @@ def get_url():
 
     config = Config(".env")
     db_user = config("DB_USER", cast=str, default="postgres")
-    db_password = config(
-        "DB_PASS", cast=str, default="postgres"
-    )
+    db_password = config("DB_PASS", cast=str, default="postgres")
     db_host = config("DB_HOST", cast=str, default="localhost")
     db_port = config("DB_PORT", cast=str, default="5432")
-    db_name = config("DB_NAME", cast=str, default="postgres")
+    db_name = config("DB_NAME", cast=str, default="employee")
     return f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 
 

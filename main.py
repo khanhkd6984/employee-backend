@@ -22,7 +22,7 @@ load_dotenv()
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,12 +55,9 @@ def read_roles(
 
 @app.post("/roles/", response_model=schemas.Role)
 def create_role(
-    token: Annotated[str, Depends(oauth2_scheme)],
     role: schemas.RoleBase,
     db: Session = Depends(get_db),
 ):
-    if not get_current_user(db=db, token=token):
-        return HTTPException(status_code=401, detail="Invalid credentials")
     db_role = crud.get_role_by_role(db=db, role=role.role)
     if db_role:
         raise HTTPException(status_code=400, detail="Role name already registered")
@@ -110,7 +107,7 @@ async def login_for_access_token(
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"name": user.name, "access_token": access_token, "token_type": "bearer"}
 
 
 @app.get("/users/me/", response_model=schemas.User)
